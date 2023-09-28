@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import User from "../models/user.model";
 import { connectToDB } from "../mongoose";
 import { FilterQuery, SortOrder } from "mongoose";
+import Community from "../models/community.model";
 
 interface Params {
   userId: string;
@@ -21,9 +22,10 @@ export async function updateUser({
   username,
   image,
 }: Params): Promise<void> {
-  connectToDB();
-
+  
   try {
+    connectToDB();
+
     await User.findOneAndUpdate(
       { id: userId },
       {
@@ -39,7 +41,7 @@ export async function updateUser({
       revalidatePath(path);
     }
   } catch (error: any) {
-    throw new Error("Failed to create/update user");
+    throw new Error("Failed to create/update user", error);
   }
 }
 
@@ -47,11 +49,11 @@ export async function fetchUser(userId: string) {
   try {
     connectToDB();
 
-    return await User.findOne({ id: userId });
-    // .populate({
-    //     path: 'communities',
-    //     model: Community
-    // })
+    return await User.findOne({ id: userId })
+    .populate({
+        path: 'communities',
+        model: Community
+    })
   } catch (error: any) {
     throw new Error(`Failed to fetch user: ${error.message}`);
   }
@@ -131,6 +133,6 @@ export async function getActivity(userId: string) {
   }
   
   catch (error: any) {
-    throw new Error(`Failed to fetch activity: ${error.message}`);
+    throw new Error(`Failed to fetch activity: ${error}`);
   }
 }

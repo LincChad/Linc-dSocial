@@ -1,5 +1,6 @@
 
 import ThreadCard from "@/components/cards/ThreadCard";
+// import Pagination from "@/components/shared/Pagination";
 import { fetchPosts } from "@/lib/actions/thread.actions";
 import { UserButton, currentUser } from "@clerk/nextjs";
  
@@ -32,6 +33,12 @@ const user = await currentUser()
         )}
 
       </section>
+      {/* TODO: Insert pagination. */}
+      {/* <Pagination
+        path='/'
+        pageNumber={searchParams?.page ? +searchParams.page : 1}
+        isNext={result.isNext}
+      /> */}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import Thread from "../models/thread.model";
 import User from "../models/user.model";
 import { connectToDB } from "../mongoose";
+import Community from "../models/community.model";
 
 interface Params {
   text: string;
@@ -21,10 +22,15 @@ export async function createThread({
   try {
     connectToDB();
 
+    const communityIdObject = await Community.findOne(
+      { id: communityId },
+      { _id: 1 }
+    );
+
     const createdThread = await Thread.create({
       text,
       author,
-      community: null,
+      community: communityIdObject,
     });
     // update user model
     await User.findByIdAndUpdate(author, {
@@ -32,6 +38,14 @@ export async function createThread({
         threads: createdThread._id,
       },
     });
+
+    if (communityIdObject) {
+      // Update Community model
+      await Community.findByIdAndUpdate(communityIdObject, {
+        $push: { threads: createdThread._id },
+      });
+    }
+
     revalidatePath(path);
   } catch (error: any) {
     throw new Error(`Failed to create thread: ${error.message}`);
@@ -148,29 +162,33 @@ export async function addCommentToThread(
 
 export async function fetchUserPosts(userId: string) {
   try {
-    connectToDB()
+    connectToDB();
 
-    // Find all threads authored by user with the given id
-
-    // TODO: populate community
-    const threads = await User.findOne({ id: userId })
-      .populate({
-        path: 'threads',
-        model: Thread,
-        populate: {
-          path: 'children',
+    // Find all threads authored by the user with the given userId
+    const threads = await User.findOne({ id: userId }).populate({
+      path: "threads",
+      model: Thread,
+      populate: [
+        {
+          path: "community",
+          model: Community,
+          select: "name id image _id", // Select the "name" and "_id" fields from the "Community" model
+        },
+        {
+          path: "children",
           model: Thread,
           populate: {
-            path: 'author',
+            path: "author",
             model: User,
-            select: 'name image id'
-          }
-        }
-      })
-      return threads
-  } catch (error: any) {
-    throw new Error(`Failed to fetch user posts: ${error.message}`);
-    
+            select: "name image id", // Select the "name" and "_id" fields from the "User" model
+          },
+        },
+      ],
+    });
+    return threads;
+  } catch (error) {
+    console.error("Error fetching user threads:", error);
+    throw error;
   }
-  
 }
+
